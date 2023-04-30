@@ -11,7 +11,7 @@
 typedef char* Cstr;
 
 int KillRunning();
-void WriteToFile(int id, int vrijemeCekanjaMs);
+void WriteToFile(int id);
 void ProcesTreeCreator();
 void proc1();
 void proc2();
@@ -26,16 +26,88 @@ void Error(Cstr message) {
 #define BROJ_PROCESA 8
 
 int RANDOM = 0;				// Paljenje i gašenje randomizacije virualnih poslova
-Cstr LOG_PATH = "log.txt";		// "out" za stdout i "err" za stderr 
-Cstr FILE_PATH = "file.txt";
+Cstr LOG_PATH = 0;			// "out" za stdout i "err" za stderr 
+Cstr FILE_PATH = 0;
 int procPipe[BROJ_PROCESA*2][2];	// 2 stanja (0 za citanje i 1 za pisanje)
 int VRIJEME_PISANJA = 0;		// Vrijeme pisanja u kriticnom odsjecku
+int BROJ_PISANJA_PROCESA0 = 2;
+time_t POCETAK_IZVODJENJA = 0;		// Vrijeme pocetka izvodjenja programa
+int VRIJEME_IZMEDJU_PISANJA_MSEC[BROJ_PROCESA] = {1300, 2300, 1450, 1000, 1300, 2300, 1000, 1300};
 
 enum KomunikacijskeKomande {
 	EXIT = -1, WAIT, READY, GO, DONE
 };
 
-int main() {
+int main(int argc, Cstr* argv) {
+	time(&POCETAK_IZVODJENJA);
+	
+	LOG_PATH = malloc(10);
+	strcpy(LOG_PATH, "log.txt");
+	FILE_PATH = malloc(10);
+	strcpy(FILE_PATH, "file.txt");
+
+	for (int i = 1; i < argc; i++) {
+		char argName[250];
+		if (!strcmp(argv[i], "-help")) {
+			Error("Help not implemented");
+		}
+		else if (!strcmp(StrLow(argv[i]), "-r") || !strcmp(StrLow(argv[i]), "--random")) {
+			if (i + 1 == argc) {
+				snprintf(argName, 150, "Opcija %s koristi se kao \"%s %s [on/off]\"", argv[i], argv[0], argv[i]);
+				Error(argName);
+			}
+			RANDOM = (!strcmp(StrLow(argv[++i]), "on")) ? 1 : 0;
+		}
+		else if (!strcmp(StrLow(argv[i]), "-c") || !strcmp(StrLow(argv[i]), "--count")) {
+			if (i + 1 == argc) {
+				snprintf(argName, 150, "Opcija %s koristi se kao \"%s %s [broj pisanja procesa #0]\"", argv[i], argv[0], argv[i]);
+				Error(argName);
+			}
+			BROJ_PISANJA_PROCESA0 = atoi(argv[++i]);
+		}
+		else if (!strcmp(StrLow(argv[i]), "-t") || !strcmp(StrLow(argv[i]), "--timeOfWriting")) {
+			if (i + 1 == argc) {
+				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [vrijeme pisanja svakog procesa]\"", argv[i], argv[0], argv[i]);
+				Error(argName);
+			}
+		 	VRIJEME_PISANJA = atoi(argv[++i]);
+		}
+		else if (!strcmp(StrLow(argv[i]), "-log") || !strcmp(StrLow(argv[i]), "--logPath")) {
+			if (i + 1 == argc) {
+				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [putanja do lokacije za spremanje log datoteke]\"", argv[i], argv[0], argv[i]);
+				Error(argName);
+			}
+			LOG_PATH = realloc(LOG_PATH, strlen(argv[++i]) + 1);
+			strcpy(LOG_PATH, argv[i]);
+		}
+		else if (!strcmp(StrLow(argv[i]), "-o") || !strcmp(StrLow(argv[i]), "--filePath")) {
+			if (i + 1 == argc) {
+				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [putanja do lokacije za spremanje datoteke]\"", argv[i], argv[0], argv[i]);
+				Error(argName);
+			}
+			FILE_PATH = realloc(FILE_PATH, strlen(argv[++i]) + 1);
+			strcpy(FILE_PATH, argv[i]);
+		}
+		else if (!strcmp(StrLow(argv[i]), "-tbw") || !strcmp(StrLow(argv[i]), "--timeBeforeWrite")) {
+			if (i + 2 >= argc) {
+				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [#procesa/all] [vrijeme u ms]\"", argv[i], argv[0], argv[i]);
+				Error(argName);
+			}
+			if (!strcmp(StrLow(argv[++i]), "all")) {
+				i++;
+				for (int j = 0; j < BROJ_PROCESA; j++)
+					VRIJEME_IZMEDJU_PISANJA_MSEC[j] = atoi(argv[i]);
+			} else {
+				int id = atoi(argv[i]);
+				if (id < 0 || id > 7) Error("Broj procesa mora biti od 0 do 7");
+				VRIJEME_IZMEDJU_PISANJA_MSEC[id] = atoi(argv[++i]);
+			}
+		}
+		else if (argc != 1) {
+			snprintf(argName, 150, "Argumenti nisu prepoznati\n\e[0;37mUpiši \"%s -help\" za pomoć!", argv[0]);
+			Error(argName);
+		}
+	}
 
 
 // ***** POSTAVLJANJE KOMUNIKACIJE S PROCESIMA *****
@@ -58,13 +130,17 @@ int main() {
 		else close(procPipe[i][1]);			// Sa gornjih (id*2) ce samo dobivati info pa ne smije pisati
 	}
 	 
+	FILE *log;
+	if (!strcmp(LOG_PATH, "out")) log = stdout;
+	else if (!strcmp(LOG_PATH, "err")) log = stderr;
+	else log = fopen(LOG_PATH, "w");
 
 	int komanda = GO;
 	while (komanda != EXIT) {
 		for (int i = 0; i < BROJ_PROCESA && komanda != EXIT; i++) {
 			int dobivenaPoruka;
 			if (read(procPipe[i+BROJ_PROCESA][0], &dobivenaPoruka, 4) == -1) continue;
-			else if (dobivenaPoruka == EXIT) { komanda = EXIT; printf("Id %d poslao zahtjev o gašenju programa\n", i); continue; }
+			else if (dobivenaPoruka == EXIT) { komanda = EXIT; fprintf(log, "Id %d poslao zahtjev o gašenju programa\n", i); continue; }
 			else if (dobivenaPoruka != READY) continue;
 			
 			komanda = GO;
@@ -72,16 +148,19 @@ int main() {
 
 			do {
 				read(procPipe[i+BROJ_PROCESA][0], &dobivenaPoruka, 4);
+				fprintf(log, "Proces #%d odgovorio sa %s\n", i, IntToKomKom(dobivenaPoruka));
 			} while (dobivenaPoruka != DONE);
-			printf("Id %d pisao u file!\n", i);
+			fprintf(log, "Id %d pisao u file!\n", i);
 		}
 	}
+	
+	fclose(log);
 
 	if (KillRunning()) Error("Nije uspjela terminacija svih child procesa!");
 
 	sleep(3);
 
-	printf("Main zavrsio!\n");
+	fprintf(log, "Main zavrsio!\n");
 	exit(0);
 }
 
@@ -89,7 +168,7 @@ int KillRunning() {
 	FILE* log;
 	if (!strcmp(LOG_PATH, "out")) log = stdout;
 	else if (!strcmp(LOG_PATH, "err")) log = stderr;
-	else log = fopen(LOG_PATH, "w");
+	else log = fopen(LOG_PATH, "a");
 
 	fprintf(log, "Pripremanje za gašenja procesa\n");
 
@@ -116,53 +195,62 @@ int KillRunning() {
 	return returnVal;
 }
 
-void WriteToFile(int id, int vrijemeIzmedjuPisanjaMs) {
+void WriteToFile(int id) {
 	close(procPipe[id+BROJ_PROCESA][0]);  // Zabrana citanja s id*2 pipe
 	close(procPipe[id][1]);   //  Zabrana pisanja na id pipe
 	int poruka = WAIT;
 	srand(id*time(NULL));
 
+	float vrijemeIzmedjuPisanjaMs = VRIJEME_IZMEDJU_PISANJA_MSEC[id] / 1000.0;
 	int count = 0;
 
 	while(poruka != EXIT) {
-		float pravoVrijemeIzmedjuPisanja = vrijemeIzmedjuPisanjaMs/1000.0 + (float)rand()/(float)RAND_MAX*1.96*RANDOM;
+		float pravoVrijemeIzmedjuPisanja = vrijemeIzmedjuPisanjaMs + (float)rand()/(float)RAND_MAX*1.96*RANDOM;
 										 // Daje random broj od 0 - 1.96       ^Omogućuje randomizaciju
 		sleep(pravoVrijemeIzmedjuPisanja);
 
 		poruka = READY;
 		write(procPipe[id+BROJ_PROCESA][1], &poruka, 4);
 		
-		clock_t pocetakCekanja, krajCekanja; 
-		pocetakCekanja = clock();
+		struct timespec pocetakCekanja, krajCekanja;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &pocetakCekanja);
 
-		while (poruka != EXIT && poruka != WAIT){
-			do {
-				read(procPipe[id][0], &poruka, 4); // Citanje trenutne komande
-			} while (poruka == WAIT && poruka != GO && poruka != EXIT);
-			if (poruka == EXIT) continue;
-			
-			krajCekanja = clock();
+		// Cekanje odobrenja za ulazak u kriticni odsjecak
+		int readFail = 0;
+		do {
+			readFail = read(procPipe[id][0], &poruka, 4); // Citanje trenutne komande
+		} while (readFail == -1 || (poruka == WAIT && poruka != GO && poruka != EXIT));
+		if (poruka == EXIT) continue;
+		
+		clock_gettime(CLOCK_MONOTONIC_RAW, &krajCekanja);
 
-			FILE *fp;
-			fp = fopen(FILE_PATH, "a");
-			count++;
+		// ***** KRITICNI ODSJECAK *****
 
-			sleep(0); // Emulacija programa koji dugo piše unutar kritičnog odsječka
+		FILE *fp;
+		if (!strcmp(FILE_PATH, "out")) fp = stdout;
+		else if (!strcmp(FILE_PATH, "err")) fp = stderr;
+		else fp = fopen(FILE_PATH, "a");
+		count++;
 
-			float vrijemeCekanjaMs = (krajCekanja - pocetakCekanja / (float)CLOCKS_PER_SEC);
-			fprintf(fp, "Ovo je proces #%d (%d) i cekao je %4.4fms", id, getpid(), vrijemeCekanjaMs);
-			fprintf(fp, " | Vrijeme između pisanja:  %1.2fs", vrijemeIzmedjuPisanjaMs/1000.0);
-			if (RANDOM) fprintf(fp, " (+%fs)", pravoVrijemeIzmedjuPisanja - vrijemeIzmedjuPisanjaMs/1000.0); 
-			fprintf(fp, "\n");
+		if (VRIJEME_PISANJA) sleep(VRIJEME_PISANJA / 1000.0); // Emulacija programa koji dugo piše unutar kritičnog odsječka
 
-			fclose(fp);
+		long int vrijemeCekanjaMicroSec = (krajCekanja.tv_sec - pocetakCekanja.tv_sec) * 1000000 + (krajCekanja.tv_nsec - pocetakCekanja.tv_nsec) / 1000;
+		float vrijemeCekanjaMs = (vrijemeCekanjaMicroSec) / 1000.0;
 
-			poruka = DONE;
-			write(procPipe[id+BROJ_PROCESA][1], &poruka, 4);
-			poruka = WAIT;
-		}
+		fprintf(fp, "[%2ld] Zapis #%02d procesa #%02d (%d) i cekao je %9.4fms", time(NULL)-POCETAK_IZVODJENJA, count, id, getpid(), vrijemeCekanjaMs);
+		fprintf(fp, " | Vrijeme između pisanja:  %1.2fs", vrijemeIzmedjuPisanjaMs);
+		if (RANDOM) fprintf(fp, " (+%fs)", pravoVrijemeIzmedjuPisanja - vrijemeIzmedjuPisanjaMs); 
+		fprintf(fp, "\n");
 
-		if (id == 0 && count >= 3) { poruka = EXIT; write(procPipe[id+BROJ_PROCESA][1], &poruka, 4); poruka = WAIT; }
+		fclose(fp);
+
+		poruka = DONE;
+		write(procPipe[id+BROJ_PROCESA][1], &poruka, 4);
+		poruka = WAIT;
+
+		// ***** KRAJ KRITICNOG ODSJECKA *****
+
+		if (id == 0 && count >= BROJ_PISANJA_PROCESA0) { poruka = EXIT; write(procPipe[id+BROJ_PROCESA][1], &poruka, 4); }
 	}
 
 	poruka = EXIT; //Potvrda o zavrsetku
@@ -192,6 +280,9 @@ void ProcesTreeCreator() {
 	PROC5			2.30	
 	PROC6			1.00	
 	PROC7			1.30	
+
+
+	Vremena je moguce promjeniti komandama!
 							*/
 
 	int id = fork();
@@ -200,34 +291,34 @@ void ProcesTreeCreator() {
 	id = fork();
 	if (!id) proc2();
 
-	WriteToFile(0, 1300);
+	WriteToFile(0);
 }
 
 void proc1() {
 	int id = fork();
-	if (!id) WriteToFile(3, 1000);
+	if (!id) WriteToFile(3);
 
 	id = fork();
-	if (!id) WriteToFile(4, 1300);
+	if (!id) WriteToFile(4);
 	
-	WriteToFile(1, 1300);
+	WriteToFile(1);
 }
 
 void proc2() {
 	int id = fork();
-	if (!id) WriteToFile(5, 2300);
+	if (!id) WriteToFile(5);
 
 	id = fork();
 	if (!id) proc6();
 
-	WriteToFile(2, 1450);
+	WriteToFile(2);
 }
 
 void proc6() {
 	int id = fork();
-	if (!id) WriteToFile(7, 1300);
+	if (!id) WriteToFile(7);
 
-	WriteToFile(6, 1000);
+	WriteToFile(6);
 }
 
 Cstr IntToKomKom(int input) {
@@ -246,7 +337,7 @@ Cstr IntToKomKom(int input) {
 	return "";
 }
 
-Cstr ToLow(Cstr input) {
+Cstr StrLow(Cstr input) {
 	
 	int inLen = strlen(input);
 	Cstr output = malloc(inLen + 1);
