@@ -78,8 +78,8 @@ int main() {
 
 int KillRunning() {
 	FILE* log;
-	if (strcmp(LOG_PATH, "out")) log = stdout;
-	else if (strcmp(LOG_PATH, "err")) log = stderr;
+	if (!strcmp(LOG_PATH, "out")) log = stdout;
+	else if (!strcmp(LOG_PATH, "err")) log = stderr;
 	else log = fopen(LOG_PATH, "w");
 
 	fprintf(log, "Pripremanje za gašenja procesa\n");
