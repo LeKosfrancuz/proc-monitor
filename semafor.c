@@ -47,6 +47,7 @@ int main(int argc, Cstr* argv) {
 	strcpy(FILE_PATH, "file.txt");
 
 	for (int i = 1; i < argc; i++) {
+		printf("%s\n", argv[i]);
 		char argName[250];
 		if (!strcmp(argv[i], "-help")) {
 			Error("Help not implemented");
@@ -65,14 +66,14 @@ int main(int argc, Cstr* argv) {
 			}
 			BROJ_PISANJA_PROCESA0 = atoi(argv[++i]);
 		}
-		else if (!strcmp(StrLow(argv[i]), "-t") || !strcmp(StrLow(argv[i]), "--timeOfWriting")) {
+		else if (!strcmp(StrLow(argv[i]), "-t") || !strcmp(StrLow(argv[i]), "--time-of-writing")) {
 			if (i + 1 == argc) {
 				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [vrijeme pisanja svakog procesa]\"", argv[i], argv[0], argv[i]);
 				Error(argName);
 			}
 		 	VRIJEME_PISANJA = atoi(argv[++i]);
 		}
-		else if (!strcmp(StrLow(argv[i]), "-log") || !strcmp(StrLow(argv[i]), "--logPath")) {
+		else if (!strcmp(StrLow(argv[i]), "-log") || !strcmp(StrLow(argv[i]), "--log-path")) {
 			if (i + 1 == argc) {
 				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [putanja do lokacije za spremanje log datoteke]\"", argv[i], argv[0], argv[i]);
 				Error(argName);
@@ -80,7 +81,7 @@ int main(int argc, Cstr* argv) {
 			LOG_PATH = realloc(LOG_PATH, strlen(argv[++i]) + 1);
 			strcpy(LOG_PATH, argv[i]);
 		}
-		else if (!strcmp(StrLow(argv[i]), "-o") || !strcmp(StrLow(argv[i]), "--filePath")) {
+		else if (!strcmp(StrLow(argv[i]), "-o") || !strcmp(StrLow(argv[i]), "--file-path")) {
 			if (i + 1 == argc) {
 				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [putanja do lokacije za spremanje datoteke]\"", argv[i], argv[0], argv[i]);
 				Error(argName);
@@ -88,7 +89,7 @@ int main(int argc, Cstr* argv) {
 			FILE_PATH = realloc(FILE_PATH, strlen(argv[++i]) + 1);
 			strcpy(FILE_PATH, argv[i]);
 		}
-		else if (!strcmp(StrLow(argv[i]), "-tbw") || !strcmp(StrLow(argv[i]), "--timeBeforeWrite")) {
+		else if (!strcmp(StrLow(argv[i]), "-tbw") || !strcmp(StrLow(argv[i]), "--time-before-write")) {
 			if (i + 2 >= argc) {
 				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [#procesa/all] [vrijeme u ms]\"", argv[i], argv[0], argv[i]);
 				Error(argName);
@@ -104,7 +105,7 @@ int main(int argc, Cstr* argv) {
 			}
 		}
 		else if (argc != 1) {
-			snprintf(argName, 150, "Argumenti nisu prepoznati\n\e[0;37mUpiši \"%s -help\" za pomoć!", argv[0]);
+			snprintf(argName, 150, "Argument (%s) nije prepoznat\n\e[0;37mUpiši \"%s -help\" za pomoć!", argv[i], argv[0]);
 			Error(argName);
 		}
 	}
