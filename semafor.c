@@ -328,9 +328,9 @@ Cstr IntToKomKom(int input) {
 		case READY: return "READY";
 		case GO: return "GO";
 		case DONE: return "DONE";
-		default: Cstr errout = malloc(50);
-			 sprintf(errout, "Nepoznat Komunikacijski Kod %d", input);
-			 Error(errout);
+		default: { Cstr errout = malloc(50);
+			   sprintf(errout, "Nepoznat Komunikacijski Kod %d", input);
+			   Error(errout); }
 	}
 
 	Error("Unreachable");
