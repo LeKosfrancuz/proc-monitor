@@ -50,7 +50,7 @@ Argument opciji je vrijeme u milisekundama.
 
 
 ### **__Vrijeme prije kritičnog odsječka__**
-Kako bi se procesi činili stvarnijima moraju raditi stvari izvan kritičnog odsječka. To se može napraviti s opcijom `-tbw` ili `--time-before-write` (*default*: [Tablica procesa](https://github.com/LeKosfrancuz/proc-semaphore/edit/main/README.md#tablica-procesa))
+Kako bi se procesi činili stvarnijima moraju raditi stvari izvan kritičnog odsječka. To se može napraviti s opcijom `-tbw` ili `--time-before-write` (*default*: [Tablica procesa](https://github.com/LeKosfrancuz/proc-semaphore#tablica-procesa))
 ```bash
 # Proces 4 će sada čekati 1.5s izvan kriticnog odsjecka.
 ./Semafor.out --time-before-write 4 1500
@@ -96,7 +96,7 @@ Kao i dnevnicke zapise, moguće je poslati sadržaj te datoteke na *standardni i
 # Program će ispisati što procesi pišu na standardni izlaz
 ./Semafor.out --file-path out
 ```
->***__Napomena:__**  standardni izlaz poprilično je spor pa se možda neće svi zapisi prikazati ako su kratka vremena prije i tijekom kritičnog odsječka. Promjena tih vremena pokazana je [ovdje za izvan k.o.](https://github.com/LeKosfrancuz/proc-semaphore/edit/main/README.md#vrijeme-prije-kritičnog-odsječka) i [ovdje za unutar k.o.](https://github.com/LeKosfrancuz/proc-semaphore/edit/main/README.md#vrijeme-u-kritičnom-odsječku)*
+>***__Napomena:__**  standardni izlaz poprilično je spor pa se možda neće svi zapisi prikazati ako su kratka vremena prije i tijekom kritičnog odsječka. Promjena tih vremena pokazana je [ovdje za izvan k.o.](https://github.com/LeKosfrancuz/proc-semaphore#vrijeme-prije-kritičnog-odsječka) i [ovdje za unutar k.o.](https://github.com/LeKosfrancuz/proc-semaphore#vrijeme-u-kritičnom-odsječku)*
 
 ```bash
 # Primjer ne prikazivanja niti spremanja datoteke sa zapisima
