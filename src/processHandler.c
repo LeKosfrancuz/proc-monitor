@@ -3,11 +3,11 @@
 
 #include "constLib.h"
 
-int KillRunning() {
+int KillRunning(Cstr logPath) {
 	FILE* log;
-	if (!strcmp(LOG_PATH, "out")) log = stdout;
-	else if (!strcmp(LOG_PATH, "err")) log = stderr;
-	else log = fopen(LOG_PATH, "a");
+	if (!strcmp(logPath, "out")) log = stdout;
+	else if (!strcmp(logPath, "err")) log = stderr;
+	else log = fopen(logPath, "a");
 
 	fprintf(log, "%sPripremanje za gašenja procesa%s\n", CYN_CC, LWHITE_CC);
 
@@ -34,7 +34,7 @@ int KillRunning() {
 	return returnVal;
 }
 
-void ProcesTreeCreator() {
+void ProcesTreeCreator(Cstr filePath) {
 /*
 			
 			GLAVNI (PROC 0)
@@ -60,39 +60,39 @@ void ProcesTreeCreator() {
 							*/
 
 	int id = fork();
-	if (!id) proc1();
+	if (!id) proc1(filePath);
 	
 	id = fork();
-	if (!id) proc2();
+	if (!id) proc2(filePath);
 
-	WriteToFile(0);
+	WriteToFile(0, filePath);
 }
 
-void proc1() {
+void proc1(Cstr filePath) {
 	int id = fork();
-	if (!id) WriteToFile(3);
+	if (!id) WriteToFile(3, filePath);
 
 	id = fork();
-	if (!id) WriteToFile(4);
+	if (!id) WriteToFile(4, filePath);
 	
-	WriteToFile(1);
+	WriteToFile(1, filePath);
 }
 
-void proc2() {
+void proc2(Cstr filePath) {
 	int id = fork();
-	if (!id) WriteToFile(5);
+	if (!id) WriteToFile(5, filePath);
 
 	id = fork();
-	if (!id) proc6();
+	if (!id) proc6(filePath);
 
-	WriteToFile(2);
+	WriteToFile(2, filePath);
 }
 
-void proc6() {
+void proc6(Cstr filePath) {
 	int id = fork();
-	if (!id) WriteToFile(7);
+	if (!id) WriteToFile(7, filePath);
 
-	WriteToFile(6);
+	WriteToFile(6, filePath);
 }
 
 #endif

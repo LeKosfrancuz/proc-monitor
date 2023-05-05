@@ -1,8 +1,6 @@
 #include "constLib.h"		// Definicije funkcija i konstanti
 
 int RANDOM = 0;				// Paljenje i gašenje randomizacije virualnih poslova
-Cstr LOG_PATH = 0;			// "out" za stdout i "err" za stderr 
-Cstr FILE_PATH = 0;
 int procPipe[BROJ_PROCESA*2][2];	// 2 stanja (0 za citanje i 1 za pisanje)
 int VRIJEME_PISANJA = 0;		// Vrijeme pisanja u kriticnom odsjecku
 int BROJ_PISANJA_PROCESA0 = 2;
@@ -20,12 +18,13 @@ enum KomunikacijskeKomande {
 int main(int argc, Cstr* argv) {
 	time(&POCETAK_IZVODJENJA);
 	
-	LOG_PATH = malloc(10);
-	strcpy(LOG_PATH, "log.txt");
-	FILE_PATH = malloc(10);
-	strcpy(FILE_PATH, "file.txt");
+	Cstr logPath = malloc(10);			// "out" za stdout i "err" za stderr 
+	Cstr filePath = malloc(10);
 
-	ApplyCommandLineArgs(argc, argv);
+	strcpy(logPath, "log.txt");
+	strcpy(filePath, "file.txt");
+
+	ApplyCommandLineArgs(argc, argv, logPath, filePath);
 
 // ***** POSTAVLJANJE KOMUNIKACIJE S PROCESIMA *****
 	for (int i = 0; i < BROJ_PROCESA*2; i++)
@@ -38,7 +37,7 @@ int main(int argc, Cstr* argv) {
 	int childPid = fork();	
 
 	if (childPid == 0)
-		ProcesTreeCreator();
+		ProcesTreeCreator(filePath);
 
 // ***** UPRAVLJANJE PROCESIMA: SEMAFOR *****	
 
@@ -48,9 +47,9 @@ int main(int argc, Cstr* argv) {
 	}
 	 
 	FILE *log;
-	if (!strcmp(LOG_PATH, "out")) log = stdout;
-	else if (!strcmp(LOG_PATH, "err")) log = stderr;
-	else log = fopen(LOG_PATH, "w");
+	if (!strcmp(logPath, "out")) log = stdout;
+	else if (!strcmp(logPath, "err")) log = stderr;
+	else log = fopen(logPath, "w");
 
 	int komanda = GO;
 	while (komanda != EXIT) {
@@ -73,11 +72,11 @@ int main(int argc, Cstr* argv) {
 	
 	fclose(log);
 
-	if (KillRunning()) Error("Nije uspjela terminacija svih child procesa!");
+	if (KillRunning(logPath)) Error("Nije uspjela terminacija svih child procesa!");
 
 	sleep(1);
 
-	log = fopen(LOG_PATH, "a");
+	log = fopen(logPath, "a");
 	fprintf(log, "Main završio!\n");
 	printf("Main završio!\n");
 	fclose(log);
@@ -86,7 +85,7 @@ int main(int argc, Cstr* argv) {
 }
 
 
-void WriteToFile(int id) {
+void WriteToFile(int id, Cstr filePath) {
 	close(procPipe[id+BROJ_PROCESA][0]);  // Zabrana citanja s id*2 pipe
 	close(procPipe[id][1]);   //  Zabrana pisanja na id pipe
 	int poruka = WAIT;
@@ -118,9 +117,9 @@ void WriteToFile(int id) {
 		// ***** KRITICNI ODSJECAK *****
 
 		FILE *fp;
-		if (!strcmp(FILE_PATH, "out")) fp = stdout;
-		else if (!strcmp(FILE_PATH, "err")) fp = stderr;
-		else fp = fopen(FILE_PATH, "a");
+		if (!strcmp(filePath, "out")) fp = stdout;
+		else if (!strcmp(filePath, "err")) fp = stderr;
+		else fp = fopen(filePath, "a");
 		count++;
 
 		if (VRIJEME_PISANJA) sleep(VRIJEME_PISANJA / 1000.0); // Emulacija programa koji dugo piše unutar kritičnog odsječka

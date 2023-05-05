@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 
-void ApplyCommandLineArgs(int argc, Cstr* argv) {
+void ApplyCommandLineArgs(int argc, Cstr* argv, Cstr logPath, Cstr filePath) {
 
 	for (int i = 1; i < argc; i++) {
 		char argName[250];
@@ -38,16 +38,16 @@ void ApplyCommandLineArgs(int argc, Cstr* argv) {
 				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [putanja do lokacije za spremanje log datoteke]\"", argv[i], argv[0], argv[i]);
 				Error(argName);
 			}
-			LOG_PATH = realloc(LOG_PATH, strlen(argv[++i]) + 1);
-			strcpy(LOG_PATH, argv[i]);
+			logPath = realloc(logPath, strlen(argv[++i]) + 1);
+			strcpy(logPath, argv[i]);
 		}
 		else if (!strcmp(StrLow(argv[i]), "-o") || !strcmp(StrLow(argv[i]), "--file-path")) {
 			if (i + 1 == argc) {
 				snprintf(argName, 250, "Opcija %s koristi se kao \"%s %s [putanja do lokacije za spremanje datoteke]\"", argv[i], argv[0], argv[i]);
 				Error(argName);
 			}
-			FILE_PATH = realloc(FILE_PATH, strlen(argv[++i]) + 1);
-			strcpy(FILE_PATH, argv[i]);
+			filePath = realloc(filePath, strlen(argv[++i]) + 1);
+			strcpy(filePath, argv[i]);
 		}
 		else if (!strcmp(StrLow(argv[i]), "-tbw") || !strcmp(StrLow(argv[i]), "--time-before-write")) {
 			if (i + 2 >= argc) {

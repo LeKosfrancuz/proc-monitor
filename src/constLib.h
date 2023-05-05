@@ -22,12 +22,12 @@ typedef char* Cstr;
 #define MAG_CC "\x1B[1;35m"
 #define YELW_CC "\x1B[1;33m"
 
-extern int KillRunning();
-extern void WriteToFile(int id);
-extern void ProcesTreeCreator();
-extern void proc1();
-extern void proc2();
-extern void proc6();
+extern int KillRunning(Cstr logPath);
+extern void WriteToFile(int id, Cstr filePath);
+extern void ProcesTreeCreator(Cstr filePath);
+extern void proc1(Cstr filePath);
+extern void proc2(Cstr filePath);
+extern void proc6(Cstr filePath);
 extern Cstr IntToKomKom(int input);
 extern Cstr StrLow(Cstr input);
 void Error(Cstr message) {
