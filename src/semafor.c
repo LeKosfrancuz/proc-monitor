@@ -1,7 +1,7 @@
+// #define DEBUG
 #include "constLib.h"		// Definicije funkcija i konstanti
 
 int RANDOM = 0;				// Paljenje i gašenje randomizacije virualnih poslova
-int procPipe[BROJ_PROCESA*2][2];	// 2 stanja (0 za citanje i 1 za pisanje)
 int VRIJEME_PISANJA = 0;		// Vrijeme pisanja u kriticnom odsjecku
 int BROJ_PISANJA_PROCESA0 = 2;
 time_t POCETAK_IZVODJENJA = 0;		// Vrijeme pocetka izvodjenja programa
@@ -14,9 +14,10 @@ enum KomunikacijskeKomande {
 #include "CLIProcesor.c"	// Procesiranje argumenata komandne linije
 #include "processHandler.c"	// Kreacija i terminacija procesa
 
-
 int main(int argc, Cstr* argv) {
 	time(&POCETAK_IZVODJENJA);
+
+	int procPipe[BROJ_PROCESA*2][2];	// 2 stanja (0 za citanje i 1 za pisanje)
 	
 	Cstr logPath = malloc(10);			// "out" za stdout i "err" za stderr 
 	Cstr filePath = malloc(10);
@@ -37,13 +38,28 @@ int main(int argc, Cstr* argv) {
 	int childPid = fork();	
 
 	if (childPid == 0)
-		ProcesTreeCreator(filePath);
+		ProcesTreeCreator(filePath, procPipe);
 
 // ***** UPRAVLJANJE PROCESIMA: SEMAFOR *****	
 
+	Pipe procPipes[BROJ_PROCESA];
+
 	for (int i = 0; i < BROJ_PROCESA*2; i++) {
-		if (i < BROJ_PROCESA) close(procPipe[i][0]);	//Sa doljnjih ce samo pisati pa treba zabraniti citanje
-		else close(procPipe[i][1]);			// Sa gornjih (id*2) ce samo dobivati info pa ne smije pisati
+		/* Proces nesmije imat pristup citati sa pipe-a na koji pise, 
+		 ovdje taj kraj zatvaramo pa to nije moguće, a drugi kraj dodjelit pipeHandler-u	*/
+		if (i < BROJ_PROCESA) {
+			close(procPipe[i][0]);
+
+			procPipes[i].write = dup(procPipe[i][1]);
+			close(procPipe[i][1]);
+		}
+		/* Sa gornjih (id*2) ce samo dobivati info pa ne smije pisati */
+		else {
+			close(procPipe[i][1]);
+
+			procPipes[i - BROJ_PROCESA].read = dup(procPipe[i][0]);
+			close(procPipe[i][0]);
+		}
 	}
 	 
 	FILE *log;
@@ -55,15 +71,15 @@ int main(int argc, Cstr* argv) {
 	while (komanda != EXIT) {
 		for (int i = 0; i < BROJ_PROCESA && komanda != EXIT; i++) {
 			int dobivenaPoruka;
-			if (read(procPipe[i+BROJ_PROCESA][0], &dobivenaPoruka, 4) == -1) continue;
+			if (read(procPipes[i].read, &dobivenaPoruka, 4) == -1) continue;
 			else if (dobivenaPoruka == EXIT) { komanda = EXIT; fprintf(log, "Id %d poslao zahtjev o gašenju programa\n", i); continue; }
 			else if (dobivenaPoruka != READY) continue;
 			
 			komanda = GO;
-			write(procPipe[i][1], &komanda, 4);
+			write(procPipes[i].write, &komanda, 4);
 
 			do {
-				if (read(procPipe[i+BROJ_PROCESA][0], &dobivenaPoruka, 4) == -1 ) { dobivenaPoruka = WAIT; continue; }
+				if (read(procPipes[i].read, &dobivenaPoruka, 4) == -1 ) { dobivenaPoruka = WAIT; continue; }
 				fprintf(log, "Proces #%d odgovorio sa %s\n", i, IntToKomKom(dobivenaPoruka));
 			} while (dobivenaPoruka != DONE);
 			fprintf(log, "Proces #%d završio pisanje u file!\n", i);
@@ -72,7 +88,7 @@ int main(int argc, Cstr* argv) {
 	
 	fclose(log);
 
-	if (KillRunning(logPath)) Error("Nije uspjela terminacija svih child procesa!");
+	if (KillRunning(logPath, procPipes)) Error("Nije uspjela terminacija svih child procesa!");
 
 	sleep(1);
 
@@ -85,9 +101,7 @@ int main(int argc, Cstr* argv) {
 }
 
 
-void WriteToFile(int id, Cstr filePath) {
-	close(procPipe[id+BROJ_PROCESA][0]);  // Zabrana citanja s id*2 pipe
-	close(procPipe[id][1]);   //  Zabrana pisanja na id pipe
+void WriteToFile(int id, Cstr filePath, Pipe pipe) {
 	int poruka = WAIT;
 	srand(id*time(NULL));
 
@@ -100,7 +114,7 @@ void WriteToFile(int id, Cstr filePath) {
 		sleep(pravoVrijemeIzmedjuPisanjaSec);
 
 		poruka = READY;
-		write(procPipe[id+BROJ_PROCESA][1], &poruka, 4);
+		write(pipe.write, &poruka, 4);
 		
 		struct timespec pocetakCekanja, krajCekanja;
 		clock_gettime(CLOCK_MONOTONIC_RAW, &pocetakCekanja);
@@ -108,7 +122,7 @@ void WriteToFile(int id, Cstr filePath) {
 		// Cekanje odobrenja za ulazak u kriticni odsjecak
 		int readFail = 0;
 		do {
-			readFail = read(procPipe[id][0], &poruka, 4); // Citanje trenutne komande
+			readFail = read(pipe.read, &poruka, 4); // Citanje trenutne komande
 		} while (readFail == -1 || (poruka == WAIT && poruka != GO && poruka != EXIT));
 		if (poruka == EXIT) continue;
 		
@@ -136,16 +150,16 @@ void WriteToFile(int id, Cstr filePath) {
 		fclose(fp);
 
 		poruka = DONE;
-		write(procPipe[id+BROJ_PROCESA][1], &poruka, 4);
+		write(pipe.write, &poruka, 4);
 		poruka = WAIT;
 
 		// ***** KRAJ KRITICNOG ODSJECKA *****
 
-		if (id == 0 && count >= BROJ_PISANJA_PROCESA0) { poruka = EXIT; write(procPipe[id+BROJ_PROCESA][1], &poruka, 4); }
+		if (id == 0 && count >= BROJ_PISANJA_PROCESA0) { poruka = EXIT; write(pipe.write, &poruka, 4); }
 	}
 
 	poruka = EXIT; //Potvrda o završetku
-	write(procPipe[id+BROJ_PROCESA][1], &poruka, 4);
+	write(pipe.write, &poruka, 4);
 
 	printf("#%d je završio!\n", id);
 	exit(0);
