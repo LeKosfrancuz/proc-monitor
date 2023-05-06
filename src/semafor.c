@@ -25,7 +25,7 @@ int main(int argc, Cstr* argv) {
 	strcpy(logPath, "log.txt");
 	strcpy(filePath, "file.txt");
 
-	ApplyCommandLineArgs(argc, argv, logPath, filePath);
+	ApplyCommandLineArgs(argc, argv, &logPath, &filePath);
 
 // ***** POSTAVLJANJE KOMUNIKACIJE S PROCESIMA *****
 	for (int i = 0; i < BROJ_PROCESA*2; i++)
