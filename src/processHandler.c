@@ -95,7 +95,7 @@ void proc1(Cstr filePath, Pipe procPipes[BROJ_PROCESA]) {
 	id = fork();
 	if (!id) WriteToFile(4, filePath, procPipes[4]);
 	
-	WriteToFile(1, filePath, procPipes[id]);
+	WriteToFile(1, filePath, procPipes[1]);
 }
 
 void proc2(Cstr filePath, Pipe procPipes[BROJ_PROCESA]) {
