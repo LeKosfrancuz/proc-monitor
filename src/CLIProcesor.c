@@ -9,7 +9,9 @@ void ApplyCommandLineArgs(int argc, Cstr* argv, Cstr* logPath, Cstr* filePath) {
 
 	for (int i = 1; i < argc; i++) {
 		char argName[250];
-		if (!strcmp(argv[i], "-help")) {
+		if (!strcmp(StrLow(argv[i]), "-help")) {
+			printStdCVersion();
+
 			Error("Help not implemented");
 		}
 		else if (!strcmp(StrLow(argv[i]), "-r") || !strcmp(StrLow(argv[i]), "--random")) {

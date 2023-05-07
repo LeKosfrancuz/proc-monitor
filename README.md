@@ -6,12 +6,12 @@ Mali program koji zapocne nekoliko procesa i onda upravlja njima u kriticnom ods
 Potrebno je prvo build-at program za vlastiti os. To se može napraviti skriptom: `$ ./build.sh` ili komandom:
 
 ```bash
-clang semafor.c -o Semafor.out -lm -std=gnu99 -Wall -Wextra
+clang semafor.c -o Semafor.out -lm -std=c99 -Wall -Wextra -Werror -pedantic
 ```
 
 Potrebno je koristiti `-lm` zbog koristenja `math.h` library-a.
 
->***Napomena:** najranija verzija C-a je `gnu99` zbog koristenja funkcija za mjerenje vremena.*
+>***Napomena:** najranija verzija C-a je `c99`*
 
 
 ## Korištenje
