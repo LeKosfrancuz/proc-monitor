@@ -18,16 +18,17 @@ int KillRunning(Cstr logPath, Pipe procPipes[BROJ_PROCESA]) {
 	}
 	
 	int returnVal = 0;
-	for (int i = BROJ_PROCESA; i < BROJ_PROCESA*2; i++) {
+	for (int i = 0; i < BROJ_PROCESA; i++) {
 		const int maxRetry = 10;
 		int retry = maxRetry;
 		do {
-			read(procPipes[i].read, &kill, 4);
-			fprintf(log, "Primljen %6s od procesa %s#%d%s (preostali broj pokušaja %d)\n", IntToKomKom(kill), CYN_CC, i-BROJ_PROCESA, LWHITE_CC, retry);
+			int readRetVal = read(procPipes[i].read, &kill, 4);
+			if (readRetVal == -1) kill = WAIT; 
+			fprintf(log, "Primljen %6s od procesa %s#%d%s (preostali broj pokušaja %d)\n", IntToKomKom(kill), CYN_CC, i, LWHITE_CC, retry);
 			if (kill != EXIT) retry--;
 			sleep(0.01 * pow(2, maxRetry-retry));  // Da proces ima vremena odgovoriti ukoliko zatvara FILE ili slicno
 		} while (kill != EXIT && retry > 0);
-		if (retry <= 0) { fprintf(log, "Proces %s#%d%s nije odgovorio na zahtjev KILL\n", CYN_CC, i-BROJ_PROCESA, LWHITE_CC); returnVal = -1; }
+		if (retry <= 0) { fprintf(log, "Proces %s#%d%s nije odgovorio na zahtjev KILL\n", CYN_CC, i, LWHITE_CC); returnVal = -1; }
 	}
 
 	fclose(log);
