@@ -92,9 +92,13 @@ int main(int argc, Cstr* argv) {
 
 	sleep(1);
 
-	log = fopen(logPath, "a");
+	if (!strcmp(logPath, "out")) log = stdout;
+	else if (!strcmp(logPath, "err")) log = stderr;
+	else log = fopen(logPath, "a");
+
 	fprintf(log, "Main završio!\n");
 	printf("Main završio!\n");
+
 	fclose(log);
 
 	exit(0);

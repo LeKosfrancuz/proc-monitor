@@ -17,7 +17,7 @@ void ApplyCommandLineArgs(int argc, Cstr* argv, Cstr* logPath, Cstr* filePath) {
 			strcpy(argName, "argSet");
 		}
 
-		if (!strcmp(StrLow(currentArg), "-help")) {
+		if (!strcmp(StrLow(currentArg), "--help") || !strcmp(StrLow(currentArg), "-h")) {
 			printStdCVersion();
 
 			Error("Help not implemented");
