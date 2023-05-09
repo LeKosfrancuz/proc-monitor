@@ -40,7 +40,7 @@ int main(int argc, Cstr* argv) {
 	if (childPid == 0)
 		ProcesTreeCreator(filePath, procPipe);
 
-// ***** UPRAVLJANJE PROCESIMA: SEMAFOR *****	
+// ***** UPRAVLJANJE PROCESIMA: MONITOR *****	
 
 	Pipe procPipes[BROJ_PROCESA];
 

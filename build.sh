@@ -7,7 +7,7 @@ then
 	Debug="-g" 
 fi
 
-gcc src/semafor.c -o Semafor.out $CFlags $Debug && echo "Finished Building" || echo "Build Failed" &&
+gcc src/monitor.c -o Monitor.out $CFlags $Debug && echo "Finished Building" || echo "Build Failed" &&
 rm file.txt &&
 rm log.txt
 
